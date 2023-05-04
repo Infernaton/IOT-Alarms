@@ -26,6 +26,8 @@ serialport.pipe(xbeeAPI.parser);
 xbeeAPI.builder.pipe(serialport);
 
 serialport.on("open", function () {
+  const PAN_ID = "5544";
+  //ID -> PAN_ID
   var frame_obj = {
     // AT Request to be sent
     type: C.FRAME_TYPE.AT_COMMAND,
@@ -35,12 +37,79 @@ serialport.on("open", function () {
 
   xbeeAPI.builder.write(frame_obj);
 
+  //013A20041FB76B1 -> Arduino
   frame_obj = {
     // AT Request to be sent
     type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
-    destination64: "FFFFFFFFFFFFFFFF",
-    command: "NI",
-    commandParameter: [],
+    destination64: "0013A20041FB76B1",
+    command: "AP",
+    commandParameter: ["0"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    // AT Request to be sent
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB76B1",
+    command: "ID",
+    commandParameter: [PAN_ID],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  //0013A20041FB5A5C -> Laser
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "ID",
+    commandParameter: [PAN_ID],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "D0",
+    commandParameter: ["2"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "IC",
+    commandParameter: ["1"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "IR",
+    commandParameter: ["1F4"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "AP",
+    commandParameter: ["2"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "KY",
+    commandParameter: ["00"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
+  frame_obj = {
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013A20041FB5A5C",
+    command: "NK",
+    commandParameter: ["00"],
   };
   xbeeAPI.builder.write(frame_obj);
 });
@@ -55,6 +124,7 @@ xbeeAPI.parser.on("data", function (frame) {
   //on packet received, dispatch event
   //let dataReceived = String.fromCharCode.apply(null, frame.data);
   if (C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET === frame.type) {
+    //Digicode
     console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
     let dataReceived = String.fromCharCode.apply(null, frame.data);
     console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
@@ -66,10 +136,10 @@ xbeeAPI.parser.on("data", function (frame) {
     //storage.registerSensor(frame.remote64)
   } else if (C.FRAME_TYPE.ZIGBEE_IO_DATA_SAMPLE_RX === frame.type) {
     console.log("ZIGBEE_IO_DATA_SAMPLE_RX");
-    console.log(frame.analogSamples);
+    console.log(frame);
     //storage.registerSample(frame.remote64,frame.analogSamples.AD0 )
   } else if (C.FRAME_TYPE.REMOTE_COMMAND_RESPONSE === frame.type) {
-    console.log("REMOTE_COMMAND_RESPONSE");
+    console.log("REMOTE_COMMAND_RESPONSE", frame);
   } else {
     console.debug(frame, "test");
     let dataReceived = String.fromCharCode.apply(null, frame.commandData);
