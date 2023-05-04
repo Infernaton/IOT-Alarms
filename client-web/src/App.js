@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import mqtt from 'mqtt';
 import './App.css';
 import {useSelector} from "react-redux";
 import {useFirestoreConnect} from "react-redux-firebase";
@@ -7,12 +8,12 @@ import {Card, CardContent, CardMedia, Chip, Grid, Typography} from "@material-ui
 
 function App() {
 
-  const [datas, setDatas] = useState([])
-  const [isActive, setIsActive] = useState(false)
+  const [datas, setDatas] = useState([]);
+  const [isActive, setIsActive] = useState(false);
+  const mainTopic = "/alarm-iot/activate";
+
   const toggleChange = () => setIsActive(value => !value);
 
-
-  console.log(isActive);
   // useFirestoreConnect(() => [{collection: "sensors/5190/samples", storeAs: "samples", where:['date', '<', Date.now()], }])
   useFirestoreConnect(() => [{
     collection: "sensors/0013a20041a72961/samples",
@@ -24,7 +25,7 @@ function App() {
   const samples = useSelector((state) => state.firestore.ordered.samples)
 
   useEffect(() => {
-    console.log(samples?.length)
+/*    console.log(samples?.length)
     if (samples)
       {
         const slice = samples
@@ -32,13 +33,47 @@ function App() {
           .slice(samples?.length - 50, samples?.length - 1);
         console.log(slice)
         setDatas(slice)
-      }
+      }*/
+    const { mqttClient, sendMessage } = setupMqttClient();
+    setTimeout(() => {
+      sendMessage(mainTopic, { test: 'LUBIN VIENT D\'UN ISSEKAI' });
+    });
+
+    return () => {
+      mqttClient.end();
+    };
   }, [samples])
 
   const isEmpty = datas?.pop()?.y <= 100;
   const currentImage = isEmpty ?
     'https://i.pinimg.com/originals/71/b5/9d/71b59de71b5d34b464d8838bf7be70f1.jpg' :
     'https://www.drronsanimalhospitalsimivalley.com/wp-content/uploads/2018/11/Happy-Cat-Eating-Food.jpg'
+
+  const setupMqttClient = () => {
+    const mqttClient = mqtt.connect('wss://test.mosquitto.org:8081');
+
+    mqttClient.on('connect', () => {
+      console.log('Connected to MQTT broker');
+      mqttClient.subscribe(mainTopic);
+    });
+    mqttClient.on('message', (topic, message) => {
+      const payload = JSON.parse(message.toString());
+      console.log(`Received message on ${topic}:`, payload);
+      // Process the received message and update your state here
+    });
+
+    mqttClient.on('error', (error) => {
+      console.error('MQTT error:', error);
+    });
+
+    const sendMessage = (topic, message) => {
+      const payload = JSON.stringify(message);
+      mqttClient.publish(topic, payload);
+    };
+
+    return { mqttClient, sendMessage };
+  };
+
   return (
     <div className="App">
 
