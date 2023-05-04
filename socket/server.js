@@ -1,13 +1,35 @@
 var SerialPort = require("serialport");
 var xbee_api = require("xbee-api");
 var C = xbee_api.constants;
-//var storage = require("./storage")
+//var storage = require("./storage");
+const mqtt = require("mqtt");
+
 require("dotenv").config();
 
 const SERIAL_PORT = process.env.SERIAL_PORT;
 
+let isActivated = false;
+
 var xbeeAPI = new xbee_api.XBeeAPI({
   api_mode: 2,
+});
+
+const mainTopic = "/alarm-iot/activate";
+
+const mqttClient = mqtt.connect("wss://test.mosquitto.org:8081");
+
+mqttClient.on("connect", () => {
+  console.log("Connected to MQTT broker");
+  mqttClient.subscribe(mainTopic);
+});
+mqttClient.on("message", (topic, message) => {
+  const payload = JSON.parse(message.toString());
+  console.log(`Received message on ${topic}:`, payload);
+  // Process the received message and update your state here
+});
+
+mqttClient.on("error", (error) => {
+  console.error("MQTT error:", error);
 });
 
 let serialport = new SerialPort(
@@ -25,17 +47,18 @@ let serialport = new SerialPort(
 serialport.pipe(xbeeAPI.parser);
 xbeeAPI.builder.pipe(serialport);
 
-serialport.on("open", function () {
-  const PAN_ID = "5544";
-  //ID -> PAN_ID
-  var frame_obj = {
-    // AT Request to be sent
-    type: C.FRAME_TYPE.AT_COMMAND,
-    command: "NI",
-    commandParameter: [],
-  };
+var frame_obj;
 
-  xbeeAPI.builder.write(frame_obj);
+serialport.on("open", function () {
+  // const PAN_ID = 5544;
+  //ID -> PAN_ID
+  // frame_obj = {
+  //   // AT Request to be sent
+  //   type: C.FRAME_TYPE.AT_COMMAND,
+  //   command: "ID",
+  //   commandParameter: [PAN_ID],
+  // };
+  //xbeeAPI.builder.write(frame_obj);
 
   //013A20041FB76B1 -> Arduino
   frame_obj = {
@@ -47,23 +70,23 @@ serialport.on("open", function () {
   };
   xbeeAPI.builder.write(frame_obj);
 
-  frame_obj = {
-    // AT Request to be sent
-    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
-    destination64: "0013A20041FB76B1",
-    command: "ID",
-    commandParameter: [PAN_ID],
-  };
-  xbeeAPI.builder.write(frame_obj);
+  // frame_obj = {
+  //   // AT Request to be sent
+  //   type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+  //   destination64: "0013A20041FB76B1",
+  //   command: "ID",
+  //   commandParameter: [PAN_ID],
+  // };
+  // xbeeAPI.builder.write(frame_obj);
 
   //0013A20041FB5A5C -> Laser
-  frame_obj = {
-    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
-    destination64: "0013A20041FB5A5C",
-    command: "ID",
-    commandParameter: [PAN_ID],
-  };
-  xbeeAPI.builder.write(frame_obj);
+  // frame_obj = {
+  //   type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+  //   destination64: "0013A20041FB5A5C",
+  //   command: "ID",
+  //   commandParameter: [PAN_ID],
+  // };
+  // xbeeAPI.builder.write(frame_obj);
 
   frame_obj = {
     type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
@@ -85,7 +108,7 @@ serialport.on("open", function () {
     type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
     destination64: "0013A20041FB5A5C",
     command: "IR",
-    commandParameter: ["1F4"],
+    commandParameter: ["1000"],
   };
   xbeeAPI.builder.write(frame_obj);
 
@@ -118,6 +141,14 @@ serialport.on("open", function () {
 
 // storage.listSensors().then((sensors) => sensors.forEach((sensor) => console.log(sensor.data())))
 
+function checkLaserEntry(value) {
+  if (value > 200) {
+    console.log("Obstacle in the way !");
+  } else {
+    //console.log("...");
+  }
+}
+
 xbeeAPI.parser.on("data", function (frame) {
   //on new device is joined, register it
 
@@ -128,15 +159,14 @@ xbeeAPI.parser.on("data", function (frame) {
     console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
     let dataReceived = String.fromCharCode.apply(null, frame.data);
     console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
-  }
-
-  if (C.FRAME_TYPE.NODE_IDENTIFICATION === frame.type) {
+  } else if (C.FRAME_TYPE.NODE_IDENTIFICATION === frame.type) {
     // let dataReceived = String.fromCharCode.apply(null, frame.nodeIdentifier);
     console.log("NODE_IDENTIFICATION");
     //storage.registerSensor(frame.remote64)
   } else if (C.FRAME_TYPE.ZIGBEE_IO_DATA_SAMPLE_RX === frame.type) {
-    console.log("ZIGBEE_IO_DATA_SAMPLE_RX");
-    console.log(frame);
+    //console.log("ZIGBEE_IO_DATA_SAMPLE_RX");
+    //console.log("laser isLighted:", frame.analogSamples);
+    checkLaserEntry(frame.analogSamples.AD0);
     //storage.registerSample(frame.remote64,frame.analogSamples.AD0 )
   } else if (C.FRAME_TYPE.REMOTE_COMMAND_RESPONSE === frame.type) {
     console.log("REMOTE_COMMAND_RESPONSE", frame);
