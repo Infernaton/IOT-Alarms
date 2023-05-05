@@ -100,7 +100,7 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
-.app {
+.App {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -116,7 +116,7 @@ input:checked + .slider:before {
 }
 
 ul {
-  width: 80%;
+  width: 50%;
   height: 100%;
   list-style: none;
   overflow-y: scroll;
@@ -124,5 +124,13 @@ ul {
 }
 
 .alert {
+  color: blue;
+}
+
+.incorrect {
   color: red;
+}
+
+.correct {
+  color: green;
 }
