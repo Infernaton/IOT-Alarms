@@ -148,6 +148,10 @@ function checkLaserEntry(value) {
     sendMessage(alertTopic, "Obstacle in the way !");
   }
 }
+
+let inputCode = "";
+let password = "1111";
+
 function handleArduinoResult(json) {
   for (const input in json) {
     if (!json[input] || json[input] == "") continue;
@@ -158,9 +162,11 @@ function handleArduinoResult(json) {
           sendMessage(alertTopic, "Obstacle in the way !");
         break;
       case "digicode":
-        // ----
-        //Handle Letter from the input
-        // ----
+        inputCode += json[input];
+        if (inputCode.length == 4)
+          if (inputCode == password)
+            console.log("code bon");
+          else console.log("intrus");
         break;
     }
   }
@@ -180,8 +186,9 @@ xbeeAPI.parser.on("data", function (frame) {
       console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
       dataReceived = String.fromCharCode.apply(null, frame.data);
       console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
+      let json = JSON.parse(dataReceived);
 
-      handleArduinoResult(dataReceived);
+      handleArduinoResult(json);
       break;
     case C.FRAME_TYPE.NODE_IDENTIFICATION:
       // let dataReceived = String.fromCharCode.apply(null, frame.nodeIdentifier);
