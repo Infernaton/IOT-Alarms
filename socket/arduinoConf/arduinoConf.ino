@@ -33,10 +33,7 @@ void loop(){
   char key = keypad.getKey();// Read the key
   
   // Print if key pressed
-  if (key){
-    Serial.print("Key Pressed : ");
-    Serial.println(key);
-  }
+ 
 
   // Clears the trigPin
   digitalWrite(trigPin, LOW);
@@ -50,7 +47,12 @@ void loop(){
   // Calculating the distance
   distance = duration * 0.034 / 2;
   // Prints the distance on the Serial Monitor
-  Serial.print("Distance: ");
+  Serial.print("{'distance': ");
   Serial.println(distance);
+   if (key){
+    Serial.print(", 'digicode' : ");
+    Serial.println(key);
+    
+  }
+  Serial.println("}")
 }
-
