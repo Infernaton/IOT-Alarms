@@ -32,7 +32,7 @@ mqttClient.on("message", (topic, message) => {
     case activateTopic:
       isActivated = payload.activate;
       if (!isActivated) hasDetectedLaser = hasDetectedSonar = false;
-      const messageAct = isActivated ? "In surveil ..." : "Stopping.";
+      const messageAct = isActivated ? "In surveillance ..." : "Stopping.";
       sendMessage(
         activateTopic + "/" + (isActivated ? "on" : "off"),
         messageAct
