@@ -148,7 +148,7 @@ serialport.on("open", function () {
 
 function checkLaserEntry(value) {
   if (value > 200 && !hasDetected) {
-    sendMessage(alertTopic, "Obstacle in the way !");
+    sendMessage(alertTopic, "Door opens.");
     hasDetected = true;
   }
 }
@@ -163,7 +163,7 @@ function handleArduinoResult(json) {
     switch (input) {
       case "distance":
         if (json[input] < 30 && !hasDetected) {
-          sendMessage(alertTopic, "Obstacle in the way !");
+          sendMessage(alertTopic, "Intruder is the house !!");
           hasDetected = true;
         }
         break;
