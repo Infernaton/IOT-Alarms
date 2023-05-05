@@ -2,19 +2,15 @@ var SerialPort = require("serialport");
 var xbee_api = require("xbee-api");
 var C = xbee_api.constants;
 //var storage = require("./storage");
-const mqtt = require("mqtt");
 const handler = require("./handler/result");
-const mqttHandler = require("./handler/mqtt");
+const mqtt = require("mqtt");
 
 require("dotenv").config();
 
 const SERIAL_PORT = process.env.SERIAL_PORT;
 
 let isActivated = false;
-
-var xbeeAPI = new xbee_api.XBeeAPI({
-  api_mode: 2,
-});
+let hasDetected = false;
 
 const baseTopic = "/alarm-iot";
 const activateTopic = baseTopic + "/activate";
@@ -34,8 +30,9 @@ mqttClient.on("message", (topic, message) => {
   switch (topic) {
     case activateTopic:
       isActivated = payload.activate;
+      if (!isActivated) hasDetected = false;
       const messageAct = isActivated ? "In surveil ..." : "Stopping.";
-      mqttHandler.sendMessage(
+      sendMessage(
         activateTopic + "/" + (isActivated ? "on" : "off"),
         messageAct
       );
@@ -45,6 +42,16 @@ mqttClient.on("message", (topic, message) => {
 
 mqttClient.on("error", (error) => {
   console.error("MQTT error:", error);
+});
+
+function sendMessage(topic, message) {
+  const payload = JSON.stringify(message);
+  console.log(`--> Send message on ${topic}:`, message);
+  mqttClient.publish(topic, payload);
+}
+
+var xbeeAPI = new xbee_api.XBeeAPI({
+  api_mode: 2,
 });
 
 let serialport = new SerialPort(
@@ -140,8 +147,9 @@ serialport.on("open", function () {
 // storage.listSensors().then((sensors) => sensors.forEach((sensor) => console.log(sensor.data())))
 
 function checkLaserEntry(value) {
-  if (value > 200) {
-    mqttHandler.sendMessage(alertTopic, "Obstacle in the way !");
+  if (value > 200 && !hasDetected) {
+    sendMessage(alertTopic, "Obstacle in the way !");
+    hasDetected = true;
   }
 }
 
@@ -154,23 +162,19 @@ function handleArduinoResult(json) {
 
     switch (input) {
       case "distance":
-        if (json[input] < 30)
-          mqttHandler.sendMessage(alertTopic, "Obstacle in the way !");
+        if (json[input] < 30 && !hasDetected) {
+          sendMessage(alertTopic, "Obstacle in the way !");
+          hasDetected = true;
+        }
         break;
       case "digicode":
         inputCode += json[input];
         if (inputCode.length == 4)
           if (inputCode == password) {
-            mqttHandler.sendMessage(
-              authTopic + "/correct",
-              "Intruder deactivates alarm."
-            );
-            isActivated = false;
+            sendMessage(authTopic + "/correct", "Intruder deactivates alarm.");
+            isActivated = hasDetected = false;
           } else {
-            mqttHandler.sendMessage(
-              authTopic + "/incorrect",
-              "Bad authenticate."
-            );
+            sendMessage(authTopic + "/incorrect", "Bad authenticate.");
             inputCode = "";
           }
         break;
@@ -179,6 +183,8 @@ function handleArduinoResult(json) {
 }
 
 xbeeAPI.parser.on("data", function (frame) {
+  if (!isActivated) return;
+
   //on new device is joined, register it
 
   //on packet received, dispatch event
@@ -191,11 +197,7 @@ xbeeAPI.parser.on("data", function (frame) {
       //Expect to receive data like '{ digicode: string, distance: float }'
       //console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
       dataReceived = String.fromCharCode.apply(null, frame.data);
-      console.log(
-        ">> ZIGBEE_RECEIVE_PACKET >",
-        handler.isJson(dataReceived),
-        dataReceived
-      );
+      console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
 
       if (handler.isJson(dataReceived)) {
         handleArduinoResult(JSON.parse(dataReceived));
