@@ -147,7 +147,7 @@ serialport.on("open", function () {
 // storage.listSensors().then((sensors) => sensors.forEach((sensor) => console.log(sensor.data())))
 
 function checkLaserEntry(value) {
-  if (value > 200 && !hasDetected) {
+  if (value > 500 && !hasDetected) {
     sendMessage(alertTopic, "Door opens.");
     hasDetected = true;
   }
@@ -169,14 +169,15 @@ function handleArduinoResult(json) {
         break;
       case "digicode":
         inputCode += json[input];
-        if (inputCode.length == 4)
+        if (inputCode.length == 4) {
           if (inputCode == password) {
             sendMessage(authTopic + "/correct", "Intruder deactivates alarm.");
             isActivated = hasDetected = false;
           } else {
             sendMessage(authTopic + "/incorrect", "Bad authenticate.");
-            inputCode = "";
           }
+          inputCode = "";
+        }
         break;
     }
   }
