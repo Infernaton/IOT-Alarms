@@ -30,6 +30,7 @@ void setup(){
 }
   
 void loop(){
+  delay(50);
   char key = keypad.getKey();// Read the key
   
   // Print if key pressed
@@ -48,19 +49,14 @@ void loop(){
   distance = duration * 0.034 / 2;
   // Prints the distance on the Serial Monitor
 
-  if (key){
-  delay(10); 
-  Serial.print( "{\"digicode\" : ");
-  Serial.print(key);
-  Serial.print("}");
-    
-  }
-  else if (distance){
-    delay(250);
     Serial.print( "{\"distance\": ");
     Serial.print(distance);
-    Serial.print("}");
-  }
+   
+   if (key){
+    Serial.print( ", \"digicode\" : ");
+    Serial.print(key);
+    }
+   Serial.print("}");
  
 }
 
