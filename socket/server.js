@@ -3,6 +3,7 @@ var xbee_api = require("xbee-api");
 var C = xbee_api.constants;
 //var storage = require("./storage");
 const mqtt = require("mqtt");
+const handler = require("./handler/result");
 
 require("dotenv").config();
 
@@ -17,6 +18,7 @@ var xbeeAPI = new xbee_api.XBeeAPI({
 const baseTopic = "/alarm-iot";
 const activateTopic = baseTopic + "/activate";
 const alertTopic = baseTopic + "/alert";
+const authTopic = baseTopic + "/authDigi";
 
 const mqttClient = mqtt.connect("wss://test.mosquitto.org:8081");
 
@@ -158,15 +160,18 @@ function handleArduinoResult(json) {
 
     switch (input) {
       case "distance":
-        if (json[input] <= 100)
-          sendMessage(alertTopic, "Obstacle in the way !");
+        if (json[input] < 30) sendMessage(alertTopic, "Obstacle in the way !");
         break;
       case "digicode":
         inputCode += json[input];
         if (inputCode.length == 4)
-          if (inputCode == password)
-            console.log("code bon");
-          else console.log("intrus");
+          if (inputCode == password) {
+            sendMessage(authTopic + "/correct", "Intruder deactivates alarm.");
+            isActivated = false;
+          } else {
+            sendMessage(authTopic + "/incorrect", "Bad authenticate.");
+            inputCode = "";
+          }
         break;
     }
   }
@@ -183,12 +188,17 @@ xbeeAPI.parser.on("data", function (frame) {
     case C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET:
       //Digicode
       //Expect to receive data like '{ digicode: string, distance: float }'
-      console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
+      //console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
       dataReceived = String.fromCharCode.apply(null, frame.data);
-      console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
-      let json = JSON.parse(dataReceived);
+      console.log(
+        ">> ZIGBEE_RECEIVE_PACKET >",
+        handler.isJson(dataReceived),
+        dataReceived
+      );
 
-      handleArduinoResult(json);
+      if (handler.isJson(dataReceived)) {
+        handleArduinoResult(JSON.parse(dataReceived));
+      }
       break;
     case C.FRAME_TYPE.NODE_IDENTIFICATION:
       // let dataReceived = String.fromCharCode.apply(null, frame.nodeIdentifier);
@@ -202,7 +212,7 @@ xbeeAPI.parser.on("data", function (frame) {
       //storage.registerSample(frame.remote64,frame.analogSamples.AD0 )
       break;
     case C.FRAME_TYPE.REMOTE_COMMAND_RESPONSE:
-      console.log("REMOTE_COMMAND_RESPONSE", frame);
+      //console.log("REMOTE_COMMAND_RESPONSE", frame);
       break;
     default:
       console.debug(frame, "test");
