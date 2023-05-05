@@ -1,4 +1,4 @@
-export function isJson(str) {
+function isJson(str) {
   try {
     JSON.parse(str);
   } catch (e) {
@@ -6,3 +6,7 @@ export function isJson(str) {
   }
   return true;
 }
+
+module.exports = {
+  isJson,
+};

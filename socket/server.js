@@ -4,6 +4,7 @@ var C = xbee_api.constants;
 //var storage = require("./storage");
 const mqtt = require("mqtt");
 const handler = require("./handler/result");
+const mqttHandler = require("./handler/mqtt");
 
 require("dotenv").config();
 
@@ -22,13 +23,6 @@ const authTopic = baseTopic + "/authDigi";
 
 const mqttClient = mqtt.connect("wss://test.mosquitto.org:8081");
 
-function sendMessage(topic, message) {
-  const payload = JSON.stringify(message);
-  console.log("Obstacle in the way !");
-  console.log(`--> Send message on ${topic}:`, message);
-  mqttClient.publish(topic, payload);
-}
-
 mqttClient.on("connect", () => {
   console.log("Connected to MQTT broker");
   mqttClient.subscribe(activateTopic);
@@ -41,7 +35,7 @@ mqttClient.on("message", (topic, message) => {
     case activateTopic:
       isActivated = payload.activate;
       const messageAct = isActivated ? "In surveil ..." : "Stopping.";
-      sendMessage(
+      mqttHandler.sendMessage(
         activateTopic + "/" + (isActivated ? "on" : "off"),
         messageAct
       );
@@ -147,7 +141,7 @@ serialport.on("open", function () {
 
 function checkLaserEntry(value) {
   if (value > 200) {
-    sendMessage(alertTopic, "Obstacle in the way !");
+    mqttHandler.sendMessage(alertTopic, "Obstacle in the way !");
   }
 }
 
@@ -160,16 +154,23 @@ function handleArduinoResult(json) {
 
     switch (input) {
       case "distance":
-        if (json[input] < 30) sendMessage(alertTopic, "Obstacle in the way !");
+        if (json[input] < 30)
+          mqttHandler.sendMessage(alertTopic, "Obstacle in the way !");
         break;
       case "digicode":
         inputCode += json[input];
         if (inputCode.length == 4)
           if (inputCode == password) {
-            sendMessage(authTopic + "/correct", "Intruder deactivates alarm.");
+            mqttHandler.sendMessage(
+              authTopic + "/correct",
+              "Intruder deactivates alarm."
+            );
             isActivated = false;
           } else {
-            sendMessage(authTopic + "/incorrect", "Bad authenticate.");
+            mqttHandler.sendMessage(
+              authTopic + "/incorrect",
+              "Bad authenticate."
+            );
             inputCode = "";
           }
         break;
