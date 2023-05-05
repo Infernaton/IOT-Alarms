@@ -47,6 +47,7 @@ void loop(){
   // Calculating the distance
   distance = duration * 0.034 / 2;
   // Prints the distance on the Serial Monitor
+
   if (key){
   delay(10); 
   Serial.print( "{\"digicode\" : ");
@@ -62,4 +63,5 @@ void loop(){
   }
  
 }
+
 

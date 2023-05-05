@@ -8,6 +8,11 @@ import {Card, CardContent, CardMedia, Chip, Grid, Typography} from "@material-ui
 function App() {
 
   const [datas, setDatas] = useState([])
+  const [isActive, setIsActive] = useState(false)
+  const toggleChange = () => setIsActive(value => !value);
+
+
+  console.log(isActive);
   // useFirestoreConnect(() => [{collection: "sensors/5190/samples", storeAs: "samples", where:['date', '<', Date.now()], }])
   useFirestoreConnect(() => [{
     collection: "sensors/0013a20041a72961/samples",
@@ -51,45 +56,54 @@ function App() {
           <Chip label={'Bowl is empty'} color={"secondary"}/> :
           <Chip label={'Bowl is full'} color={"primary"}/>}
       </header>
-      <Grid
-        container
-        direction="row"
-        justify="center"
-        alignItems="flex-start"
-      >
-        <Card style={{width: 500, margin: 20}}>
-          <CardMedia
-            style={{width: "100%", height: 250}}
-            image={currentImage}
-            title="Contemplative Rephttps://www.drronsanimalhospitalsimivalley.com/wp-content/uploads/2018/11/Happy-Cat-Eating-Food.jpgtile"
-          />
-          <CardContent>
-            <Typography gutterBottom variant="h5" component="h2">
-              Live measure
-            </Typography>
-            <XYPlot height={300} width={500} xType="time"
-                    yDomain={[0, 1024]}
-            >
+      <label className="switch" onChange={toggleChange}>
+        <input type="checkbox"></input>
+        <span className="slider round"></span>
+      </label>
+      {
+        isActive === true ?
+          <Grid
+            container
+            direction="row"
+            justify="center"
+            alignItems="flex-start"
+          >
+            <Card style={{width: 500, margin: 20}}>
+              <CardMedia
+                style={{width: "100%", height: 250}}
+                image={currentImage}
+                title="Contemplative Rephttps://www.drronsanimalhospitalsimivalley.com/wp-content/uploads/2018/11/Happy-Cat-Eating-Food.jpgtile"
+              />
+              <CardContent>
+                <Typography gutterBottom variant="h5" component="h2">
+                  Live measure
+                </Typography>
+                <XYPlot height={300} width={500} xType="time"
+                        yDomain={[0, 1024]}
+                >
 
-              <VerticalGridLines/>
-              <HorizontalGridLines/>
-              <XAxis/>
-              <YAxis/>
-              <MarkSeries data={datas}/>
+                  <VerticalGridLines/>
+                  <HorizontalGridLines/>
+                  <XAxis/>
+                  <YAxis/>
+                  <MarkSeries data={datas}/>
 
-            </XYPlot>
-          </CardContent>
-        </Card>
-        <Card style={{width: 500, margin: 20}}>
+                </XYPlot>
+              </CardContent>
+            </Card>
+            <Card style={{width: 500, margin: 20}}>
 
-          <XYPlot height={300} width={500}
-                  stroke="#f70"
-                  style={{strokeWidth: 5}}>
-            {/*<LineMarkSeries data={datas} color={"red"}/>*/}
-            <LineSeries data={datas} color="#ba4fb9" style={{fill: "none"}}/>
-          </XYPlot>
-        </Card>
-      </Grid>
+              <XYPlot height={300} width={500}
+                      stroke="#f70"
+                      style={{strokeWidth: 5}}>
+                {/*<LineMarkSeries data={datas} color={"red"}/>*/}
+                <LineSeries data={datas} color="#ba4fb9" style={{fill: "none"}}/>
+              </XYPlot>
+            </Card>
+          </Grid>
+          :
+        <p> Y'a rien</p>
+      }
     </div>
   );
 }
