@@ -10,7 +10,8 @@ require("dotenv").config();
 const SERIAL_PORT = process.env.SERIAL_PORT;
 
 let isActivated = false;
-let hasDetected = false;
+let hasDetectedLaser = false;
+let hasDetectedSonar = false;
 
 const baseTopic = "/alarm-iot";
 const activateTopic = baseTopic + "/activate";
@@ -30,7 +31,7 @@ mqttClient.on("message", (topic, message) => {
   switch (topic) {
     case activateTopic:
       isActivated = payload.activate;
-      if (!isActivated) hasDetected = false;
+      if (!isActivated) hasDetectedLaser = hasDetectedSonar = false;
       const messageAct = isActivated ? "In surveil ..." : "Stopping.";
       sendMessage(
         activateTopic + "/" + (isActivated ? "on" : "off"),
@@ -147,14 +148,14 @@ serialport.on("open", function () {
 // storage.listSensors().then((sensors) => sensors.forEach((sensor) => console.log(sensor.data())))
 
 function checkLaserEntry(value) {
-  if (value > 500 && !hasDetected) {
-    sendMessage(alertTopic, "Door opens.");
-    hasDetected = true;
+  if (value > 500 && !hasDetectedLaser) {
+    sendMessage(alertTopic, "Door is open.");
+    hasDetectedLaser = true;
   }
 }
 
 let inputCode = "";
-let password = "1111";
+let password = process.env.PASSWORD;
 
 function handleArduinoResult(json) {
   for (const input in json) {
@@ -162,9 +163,9 @@ function handleArduinoResult(json) {
 
     switch (input) {
       case "distance":
-        if (json[input] < 30 && !hasDetected) {
+        if (json[input] < 30 && !hasDetectedSonar && hasDetectedLaser) {
           sendMessage(alertTopic, "Intruder is the house !!");
-          hasDetected = true;
+          hasDetectedSonar = true;
         }
         break;
       case "digicode":
@@ -172,7 +173,7 @@ function handleArduinoResult(json) {
         if (inputCode.length == 4) {
           if (inputCode == password) {
             sendMessage(authTopic + "/correct", "Intruder deactivates alarm.");
-            isActivated = hasDetected = false;
+            isActivated = hasDetectedLaser = hasDetectedSonar = false;
           } else {
             sendMessage(authTopic + "/incorrect", "Bad authenticate.");
           }
@@ -185,7 +186,6 @@ function handleArduinoResult(json) {
 
 xbeeAPI.parser.on("data", function (frame) {
   if (!isActivated) return;
-
   //on new device is joined, register it
 
   //on packet received, dispatch event
@@ -194,9 +194,6 @@ xbeeAPI.parser.on("data", function (frame) {
   let dataReceived;
   switch (frame.type) {
     case C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET:
-      //Digicode
-      //Expect to receive data like '{ digicode: string, distance: float }'
-      //console.log("C.FRAME_TYPE.ZIGBEE_RECEIVE_PACKET");
       dataReceived = String.fromCharCode.apply(null, frame.data);
       console.log(">> ZIGBEE_RECEIVE_PACKET >", dataReceived);
 
@@ -210,8 +207,6 @@ xbeeAPI.parser.on("data", function (frame) {
       //storage.registerSensor(frame.remote64)
       break;
     case C.FRAME_TYPE.ZIGBEE_IO_DATA_SAMPLE_RX:
-      //console.log("ZIGBEE_IO_DATA_SAMPLE_RX");
-      //console.log("laser isLighted:", frame.analogSamples);
       checkLaserEntry(frame.analogSamples.AD0);
       //storage.registerSample(frame.remote64,frame.analogSamples.AD0 )
       break;
